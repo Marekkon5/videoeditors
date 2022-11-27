@@ -1,0 +1,27 @@
+[package]
+name = "videoeditor"
+version = "0.1.0"
+edition = "2021"
+exclude = ["assets/"]
+
+[[example]]
+name = "basic"
+
+[dependencies]
+log = "0.4.17"
+lerp = "0.4.0"
+rand = "0.8.5"
+hound = "3.5.0"
+rodio = "0.16.0"
+image = "0.24.5"
+anyhow = "1.0.66"
+imageproc = "0.23.0"
+threadpool = "1.8.1"
+serde_json = "1.0.89"
+crossbeam-channel = "0.5.6"
+
+serde = { version = "1.0.147", features = ["derive"] }
+
+[dev-dependencies]
+num_cpus = "1.14"
+pretty_env_logger = "0.4"
