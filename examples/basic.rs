@@ -20,7 +20,7 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     // Use ffmpeg::new(ffmpeg, ffprobe) if you wish to change the default binary path
     let ffmpeg = FFmpeg::default();
-    let loader = FileLoader::new(video_cache, Duration::from_secs(3), ffmpeg.clone());
+    let loader = FileLoader::new(video_cache, ffmpeg.clone());
     let editor = Editor::new(640, 360, Duration::from_secs(10), 25.0);
 
     // Add layers
@@ -28,7 +28,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     // Base video layer
     .layer(
         Layer::new(
-            loader.load_file("assets/sample.m4v")?,
+            loader.load_file("assets/sample.m4v")?.layer_data()?,
             Duration::ZERO,
             Transform::ZERO
         )
@@ -37,7 +37,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     // Sample image overlay
     .layer(
         Layer::new(
-            loader.load_file("assets/sample.png")?,
+            loader.load_file("assets/sample.png")?.layer_data()?,
             Duration::from_secs(5),
             Transform::Percent(0.5, 0.5)
         )
@@ -47,7 +47,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     // Add audio
     .layer(
         Layer::new(
-            loader.load_file("assets/sample.mp3")?,
+            loader.load_file("assets/sample.mp3")?.layer_data()?,
             Duration::from_secs(5),
             Transform::ZERO
         )

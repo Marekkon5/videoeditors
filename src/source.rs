@@ -16,45 +16,62 @@ use crate::ffmpeg::FFmpeg;
 /// Loads and decodes files
 pub struct FileLoader {
     video_cache_path: PathBuf,
-    image_duration: Duration,
     ffmpeg: FFmpeg
 }
 
 impl FileLoader {
     /// Create new instance
-    pub fn new(video_cache_path: impl AsRef<Path>, image_duration: Duration, ffmpeg: FFmpeg) -> FileLoader {
-        FileLoader { video_cache_path: video_cache_path.as_ref().to_owned(), image_duration, ffmpeg }
-    }
-
-    /// Edit the image duration
-    pub fn image_duration(mut self, duration: Duration) -> Self {
-        self.image_duration = duration;
-        self
+    pub fn new(video_cache_path: impl AsRef<Path>, ffmpeg: FFmpeg) -> FileLoader {
+        FileLoader { video_cache_path: video_cache_path.as_ref().to_owned(), ffmpeg }
     }
 
     /// Load file from path by extension
-    pub fn load_file(&self, path: impl AsRef<Path>) -> Result<Box<dyn LayerData + Send + Sync>, Error> {
+    pub fn load_file(&self, path: impl AsRef<Path>) -> Result<MediaSource, Error> {
         let ext = path.as_ref().extension().ok_or(anyhow!("Missing extension"))?.to_string_lossy().to_ascii_lowercase();
         match &ext[..] {
             "jpg" | "jpeg" | "png" | "tiff" | "bmp" | "webp" => {
-                Ok(Box::new(ImageLayer::new(&Image::new(path), self.image_duration)?))
+                Ok(MediaSource::Image(Image::new(path)))
             },
             "mp3" | "wav" | "ogg" | "flac" => {
-                Ok(Box::new(AudioLayer::new(Audio::new(path)?)))
+                Ok(MediaSource::Audio(Audio::new(path)?))
             },
             "mp4" | "mov" | "wmv" | "avi" | "webm" | "gif" | "mkv" | "m4v" => {
                 let filename = path.as_ref().file_name().unwrap().to_string_lossy();
                 let filename = filename.split(".").next().unwrap().to_owned();
-                Ok(Box::new(VideoLayer::new(Video::load_or_cache(
+                Ok(MediaSource::Video(Video::load_or_cache(
                     path, 
                     self.video_cache_path.join(filename), 
                     &self.ffmpeg, 
                     [], 
                     []
-                )?)))
+                )?))
             },
             _ => Err(anyhow!("Unsupported extension"))
         }
+    }
+}
+
+/// One of media sources
+#[derive(Debug, Clone)]
+pub enum MediaSource {
+    Video(Video),
+    Audio(Audio),
+    Image(Image)
+}
+
+impl MediaSource {
+    /// Get layer data
+    pub fn layer_data_with_image_duration(self, duration: Duration) -> Result<Box<dyn LayerData + Send + Sync>, Error> {
+        match self {
+            MediaSource::Video(v) => return Ok(Box::new(VideoLayer::new(v))),
+            MediaSource::Audio(a) => return Ok(Box::new(AudioLayer::new(a))),
+            MediaSource::Image(i) => return Ok(Box::new(ImageLayer::new(&i, duration)?)),
+        }
+    }
+
+    /// Get layer data with default image duration
+    pub fn layer_data(self) -> Result<Box<dyn LayerData + Send + Sync>, Error> {
+        self.layer_data_with_image_duration(Duration::from_secs(5))
     }
 }
 
