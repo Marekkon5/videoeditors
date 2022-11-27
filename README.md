@@ -9,10 +9,8 @@ Made for automating memes.
 See `examples/basic.rs` for full example.
 
 ```rs
-let editor = Editor::new(640, 360, Duration::from_secs(10), 25.0);
+let editor = Editor::new(640, 360, Duration::from_secs(10), 25.0)
 
-// Add layers
-let editor = editor
 // Base video layer
 .layer(
     Layer::new(
@@ -22,6 +20,7 @@ let editor = editor
     )
     .effect(Effect::ScaleToBase { force: true })
 )
+
 // Sample image overlay
 .layer(
     Layer::new(
@@ -29,10 +28,12 @@ let editor = editor
         Duration::from_secs(5),
         Transform::Percent(0.5, 0.5)
     )
+    // Add bad effects
     .effect(Effect::ScaleOverTime { x0: 1.0, y0: 1.0, x1: 2.0, y1: 2.0 })
     .effect(Effect::RotateOverTime { a0: 0.0, a1: PI, uncropped: true })
 )
-// Add audio
+
+// Add audio layer
 .layer(
     Layer::new(
         loader.load_file("assets/sample.mp3")?,
@@ -41,5 +42,6 @@ let editor = editor
     )
     .speed(0.5)
     .effect(Effect::AudioGain { gain: 0.5 })
-    );
+);
+
 ```
