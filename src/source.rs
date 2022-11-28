@@ -75,13 +75,21 @@ impl MediaSource {
     }
 }
 
+/// Metadata of video
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VideoMeta {
+    pub width: u32,
+    pub height: u32,
+    pub duration: Duration,
+    pub frames: usize
+}
+
 /// Video source
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Video {
     pub path: PathBuf, 
-    pub duration: Duration, 
     pub audio: bool,
-    pub frames: usize,
+    pub meta: VideoMeta,
 }
 
 impl Video {
@@ -109,15 +117,14 @@ impl Video {
         }
         
         // Split
+        let meta = ffmpeg.video_meta(&input_path)?;
         std::fs::create_dir_all(&out_path.join("frames"))?;
         ffmpeg.convert(&input_path, out_path.join("frames").join("%06d.png"), ffmpeg_split_args)?;
         let audio = ffmpeg.convert(&input_path.as_ref(), &out_path.join("audio.mp3"), ffmpeg_audio_args).is_ok();
         // Generate meta
-        let duration = ffmpeg.duration(&input_path.as_ref())?;
         let video = Video {
-            duration,
+            meta,
             audio,
-            frames: std::fs::read_dir(out_path.join("frames"))?.filter_map(|e| e.map(|e| e.path().is_file().then(|| true)).ok().flatten()).count(),
             path: out_path.to_owned(),
         };
         // Save meta
@@ -233,12 +240,12 @@ impl VideoLayer {
 
 impl LayerData for VideoLayer {
     fn duration(&self) -> Duration {
-        self.video.duration
+        self.video.meta.duration
     }
 
     fn frame(&self, offset: Duration) -> Result<Option<DynamicImage>, Error> {
-        let t = offset.as_secs_f32() / self.video.duration.as_secs_f32();
-        let frame = (t * self.video.frames as f32) as usize;
+        let t = offset.as_secs_f32() / self.video.meta.duration.as_secs_f32();
+        let frame = (t * self.video.meta.frames as f32) as usize;
         Ok(Some(self.video.frame(frame)?))
     }
 

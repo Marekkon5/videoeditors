@@ -51,7 +51,7 @@ impl Editor {
 /// Layer which can be overlayed over other layers in Editor
 pub struct Layer {
     offset: Duration,
-    effects: Vec<Effect>,
+    effects: Vec<Box<dyn EditorEffect + Send + Sync>>,
     transform: Transform,
     duration: Duration,
     speed: f32,
@@ -73,8 +73,8 @@ impl Layer {
     }
 
     /// Add new effect
-    pub fn effect(mut self, effect: Effect) -> Self {
-        self.effects.push(effect);
+    pub fn effect(mut self, effect: impl EditorEffect + Send + Sync + 'static) -> Self {
+        self.effects.push(Box::new(effect));
         self
     }
 
@@ -147,6 +147,13 @@ impl Transform {
     }
 }
 
+pub trait EditorEffect {
+    /// Apply video effect and return the frame
+    fn apply_video_effect(&self, frame: DynamicImage, offset: Duration, duration: Duration, transform: &mut Transform, meta: &EditorMeta) -> DynamicImage;
+    /// Apply audio effect and return mutated stream
+    fn apply_audio_effect(&self, audio: AudioData) -> AudioData;
+}
+
 pub enum Effect {
     /// Resize to base size, force to ignore aspect ratio
     ScaleToBase { force: bool }, 
@@ -160,7 +167,7 @@ pub enum Effect {
     AudioGain { gain: f32 },
 }
 
-impl Effect {
+impl EditorEffect for Effect {
     /// Apply an effect to frame
     fn apply_video_effect(&self, frame: DynamicImage, offset: Duration, duration: Duration, transform: &mut Transform, meta: &EditorMeta) -> DynamicImage {
         match self {

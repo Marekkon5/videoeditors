@@ -23,12 +23,16 @@ fn run() -> Result<(), Box<dyn Error>> {
     let loader = FileLoader::new(video_cache, ffmpeg.clone());
     let editor = Editor::new(640, 360, Duration::from_secs(10), 25.0);
 
+    // Example load
+    let video = loader.load_file("assets/sample.m4v")?;
+    log::debug!("Video: {video:?}");
+
     // Add layers
     let editor = editor
     // Base video layer
     .layer(
         Layer::new(
-            loader.load_file("assets/sample.m4v")?.layer_data()?,
+            video.layer_data()?,
             Duration::ZERO,
             Transform::ZERO
         )

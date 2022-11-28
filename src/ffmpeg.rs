@@ -4,6 +4,8 @@ use std::ffi::OsStr;
 use std::time::Duration;
 use anyhow::Error;
 
+use crate::source::VideoMeta;
+
 /// Wait for ffmpeg output
 fn wait_output(child: Child) -> Result<(), Error> {
     let output = child.wait_with_output()?;
@@ -58,15 +60,23 @@ impl FFmpeg {
         Ok(())
     }
 
-    /// Use ffprobe to get a duration
-    /// https://superuser.com/questions/650291/how-to-get-video-duration-in-seconds
-    pub fn duration(&self, path: impl AsRef<Path>) -> Result<Duration, Error> {
-        Ok(Duration::from_secs_f64(String::from_utf8_lossy(&Command::new(&self.ffprobe)
-            .args(["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1"])
+    /// Use ffprobe to get video metadata
+    pub fn video_meta(&self, path: impl AsRef<Path>) -> Result<VideoMeta, Error> {
+        let output = String::from_utf8_lossy(&Command::new(&self.ffprobe)
+            .args(["-v", "error", "-select_streams", "v:0", "-count_frames", "-show_entries", "stream=width,height,duration,nb_read_frames", "-of", "csv=p=0"])
             .arg(path.as_ref().as_os_str())
             .output()?
             .stdout
-        ).trim().parse()?))
+        ).to_string();
+        // Parse 
+        let mut i = output.trim().split(",");
+        let meta = VideoMeta {
+            width: i.next().ok_or(anyhow!("Missing width"))?.parse()?,
+            height: i.next().ok_or(anyhow!("Missing height"))?.parse()?,
+            duration: Duration::from_secs_f32(i.next().ok_or(anyhow!("Missing duration"))?.parse()?),
+            frames: i.next().ok_or(anyhow!("Missing frame count"))?.parse()?
+        };
+        Ok(meta)
     }
 }
 
